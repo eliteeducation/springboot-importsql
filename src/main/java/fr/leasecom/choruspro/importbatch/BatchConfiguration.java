@@ -1,10 +1,13 @@
 package fr.leasecom.choruspro.importbatch;
 
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.batch.core.ItemWriteListener;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.jsr.ItemWriteListenerAdapter;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.item.data.RepositoryItemWriter;
 import org.springframework.batch.item.file.FlatFileItemReader;
@@ -19,12 +22,16 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 
+import javax.batch.operations.BatchRuntimeException;
 import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.util.Date;
+import java.util.List;
 
 @Configuration
 @EnableBatchProcessing
+@Slf4j
 public class BatchConfiguration {
 
     @Autowired
@@ -33,7 +40,6 @@ public class BatchConfiguration {
     private StepBuilderFactory stepBuilderFactory;
     @Autowired
     private ChorusStructureRepository chorusStructureRepository;
-
 
 
     @Bean
@@ -63,7 +69,7 @@ public class BatchConfiguration {
     private LineTokenizer createStudentLineTokenizer() {
         DelimitedLineTokenizer studentLineTokenizer = new DelimitedLineTokenizer();
         studentLineTokenizer.setDelimiter(";");
-        studentLineTokenizer.setNames(new String[]{"TypeIdentifiant",	"Identifiant",
+        studentLineTokenizer.setNames(new String[]{"TypeIdentifiant", "Identifiant",
                 "RaisonSociale",
                 "EmetteurEdi",
                 "RecepteurEdi",
@@ -89,40 +95,36 @@ public class BatchConfiguration {
 
     private FieldSetMapper<ChorusStructure> createChorusStructureMapper() {
 
-        BeanWrapperFieldSetMapper<ChorusStructure> studentInformationMapper = new BeanWrapperFieldSetMapper<ChorusStructure>(){
+        BeanWrapperFieldSetMapper<ChorusStructure> studentInformationMapper = new BeanWrapperFieldSetMapper<ChorusStructure>() {
             {
                 setTargetType(ChorusStructure.class);
             }
         };
-
         studentInformationMapper.setTargetType(ChorusStructure.class);
         return studentInformationMapper;
     }
 
     @Bean
     public RepositoryItemWriter<ChorusStructure> writer() {
-
         RepositoryItemWriter<ChorusStructure> writer = new RepositoryItemWriter<>();
-        writer.setRepository(
-               chorusStructureRepository);
-
+        writer.setRepository(chorusStructureRepository);
         writer.setMethodName("save"); //nom de la méthode du repository qui sera appelée
-
         return writer;
     }
 
     @Bean
-    public Job importChorusProStructureJob( ) {
-        SimpleDateFormat sfd  = new SimpleDateFormat("yyyy-MM-dd");
+    public Job importChorusProStructureJob(JobCompletionNotificationListener jobListener) {
+        SimpleDateFormat sfd = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-        return jobBuilderFactory.get("importChorusProStructureJob - " + sfd.format(new Date())).incrementer(new RunIdIncrementer())
-               .flow(lectureEcriture()).end().build();
+        return jobBuilderFactory.get("importChorusProStructureJob - " + sfd.format(new Date()))
+                .incrementer(new RunIdIncrementer())
+                .listener(jobListener).flow(lectureEcriture()).end().build();
     }
 
     @Bean
     public Step lectureEcriture() {
-        return stepBuilderFactory.get("lectureEcriture").<ChorusStructure, ChorusStructure>chunk(10).reader(reader())
-               .writer(writer()).build();
+        return stepBuilderFactory.get("lectureEcriture").<ChorusStructure, ChorusStructure>chunk(2000).listener(new ChorusStructureWriteItemListener()).reader(reader())
+                .writer(writer()).build();
     }
 
 }

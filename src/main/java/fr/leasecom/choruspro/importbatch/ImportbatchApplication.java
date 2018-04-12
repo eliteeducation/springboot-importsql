@@ -1,5 +1,6 @@
 package fr.leasecom.choruspro.importbatch;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.boot.ExitCodeGenerator;
 import org.springframework.boot.SpringApplication;
@@ -14,6 +15,7 @@ import java.util.SortedMap;
 
 @EnableBatchProcessing
 @SpringBootApplication
+@Slf4j
 public class ImportbatchApplication {
 
 	public static void main(String[] args) {
@@ -31,7 +33,7 @@ public class ImportbatchApplication {
         long lEndTime = new Date().getTime();
         long output = lEndTime - lStartTime;
 
-        System.out.println("Elapsed time in milliseconds: " + output);
+        log.info("Elapsed time in milliseconds: " + output);
 	}
 
 
