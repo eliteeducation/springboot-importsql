@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    url: jdbc:jtds:sqlserver://srv-devsql.intra.leasecom.fr:1433/TDB_QUOTIDIEN
+    username: leasecomusr
+    password: leasecompwd
+    driver-class-name: net.sourceforge.jtds.jdbc.Driver
+  jpa:
+    generate-ddl: true
+    hibernate:
+      ddl-auto: create
+
+
+server:
+  port: 3030
+
